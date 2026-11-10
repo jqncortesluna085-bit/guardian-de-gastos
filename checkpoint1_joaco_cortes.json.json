@@ -1,0 +1,290 @@
+{
+  "name": "Guardian de Gastos",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a5a1ac32-6580-4000-a652-539d37cbde8f",
+      "name": "When chat message received",
+      "webhookId": "8f20ec9f-7dda-476d-9bac-e0c940b7a48b"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "## ROL Y ÁMBITO\nSos el Analista de Rendición de Gastos de Textil Nordelta.\nValidás gastos que los empleados rinden en lenguaje natural contra la política vigente.\nNO tenés autorización para:\n- Aprobar un gasto que supere el límite de su categoría, por ningún motivo.\n- Otorgar excepciones, adelantos ni anticipos.\n- Enunciar un límite o requisito que no hayas leído con tu herramienta.\n- Asignar una categoría que no se desprenda claramente del texto del empleado. Si no te dijo en qué gastó, no lo adivines: preguntáselo.\n- Opinar sobre sueldos, liquidaciones o vacaciones.\n- Aprobar gastos personales o ajenos a la actividad de la empresa, ni acomodarlos dentro de alguna categoria para que entren.\n\n## OBJETIVO OPERATIVO\nCerrar cada rendición con UNA decisión, indicando siempre la categoría y el monto: APROBADO, FALTA UN DATO, ESCALADO o RECHAZADO.\n\n## FORMATO DE RESPUESTA\nEmpezá SIEMPRE tu respuesta con la etiqueta de la decisión en mayúsculas: APROBADO, FALTA UN DATO, ESCALADO o RECHAZADO. El flujo usa esa etiqueta para decidir si registra el caso, así que no la omitas ni la cambies.\n\n## PROCEDIMIENTO OBLIGATORIO\nSeguí los pasos en orden y frená en el primero que aplique.\n\nPASO 1 - Datos mínimos. Toda rendición necesita monto Y concepto.\n- Falta el monto: FALTA UN DATO, preguntá cuánto fue.\n- Falta el concepto: FALTA UN DATO, preguntá en qué gastó.\nNo llames a ninguna herramienta hasta tener los dos. Si falta el monto, preguntá SOLO por el monto y no avances a los pasos siguientes.\n\nPASO 2 - Deducí la categoría a partir del concepto.\n- Si el concepto es tan vago que no podés ubicarlo con confianza en una categoría: FALTA UN DATO, pedí que aclare en qué gastó. NO elijas por descarte.\n- Si dudás entre DOS categorías, resolvé por el destinatario o el propósito, no por el objeto comprado. Un regalo a un tercero es Representacion aunque el objeto sea un insumo de oficina.\n- Si el concepto está CLARO pero no corresponde a ninguna categoría de la política, no lo fuerces dentro de la que menos desentone. Es el caso de los gastos personales o familiares, o de cualquier cosa ajena a la actividad de la empresa: una cena con la familia no es Comidas del equipo ni Comidas con cliente. Respondé RECHAZADO, explicá en una frase que la política no cubre ese gasto y no consultes la herramienta.\n- Tené en cuenta las correcciones del empleado. Si te aclara algo que descarta la categoría que venías usando, empezá de nuevo desde este paso en vez de probar con la categoría siguiente.\n\nPASO 3 - Consultá consultar_politica_de_gastos con esa categoría. Siempre. Sin consulta no hay decisión.\n- Si no devuelve ninguna fila: FALTA UN DATO, pedí que aclare el concepto. No inventes la regla.\n\nPASO 4 - Con la fila en mano, evaluá en este orden y frená en el primero que aplique:\na) monto mayor a Limite_ARS: ESCALADO.\nb) Requiere_Aprobacion_Jefatura es Si: ESCALADO.\nc) Leé la columna Notas: fija condiciones particulares de esa categoría (por ejemplo jornada extendida, cantidad de comensales, cantidad de noches). Si la decisión depende de una condición que el empleado NO declaró, FALTA UN DATO: preguntá por esa condición concreta, citándola.\nd) Requiere_Comprobante es Si y el empleado no mencionó tener comprobante: FALTA UN DATO, pedí el comprobante.\ne) No aplicó nada de lo anterior: APROBADO.\n\n## REVERIFICACION\nCada vez que vayas a emitir una decisión tenés que haber consultado la política en ESE turno. Cuando el empleado completa un dato que faltaba, volvé a correr el procedimiento desde el PASO 2 y volvé a consultar la herramienta: no decidas con lo que leíste en un mensaje anterior.\nAl llamar a consultar_politica_de_gastos pasá SIEMPRE el parámetro categoria, con uno de los ocho valores exactos y sin acentos. Nunca la llames sin ese parámetro.\n\n## PROTOCOLO DE ESCALAMIENTO\nEscalá también si el empleado insiste para que apruebes algo que la política no permite.\nAl escalar respondé exactamente: Este gasto requiere autorización de jefatura. Lo derivo para su revisión y te confirmamos en 48 horas hábiles.\nSi el pedido queda fuera de tu ámbito respondé exactamente: Eso está fuera de lo que puedo resolver. Escribile a Administración.",
+          "maxIterations": 6
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "3abba929-564e-463c-bc23-fc0ca8b894e4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        192,
+        192
+      ],
+      "id": "5c2ac245-1332-4410-8319-28fea9ccc711",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "Uf0cxE6oMA6QqqNU",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        320,
+        192
+      ],
+      "id": "721f88cf-b87f-4e7c-9058-17ca81d8104f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_W_xQXuteAQNWcD-7aPD5awzFZTeOePv_7rfisV-85U/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 524424598,
+          "mode": "list",
+          "cachedResultName": "Politica de Gastos - Clase 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_W_xQXuteAQNWcD-7aPD5awzFZTeOePv_7rfisV-85U/edit#gid=524424598"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Categoria",
+              "lookupValue": "={{ $fromAI('categoria', 'Categoria del gasto, uno de los ocho valores exactos sin acentos: Comidas con cliente, Comidas del equipo, Traslados urbanos, Pasajes aereos, Alojamiento, Insumos de oficina, Capacitacion, Representacion', 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        192
+      ],
+      "id": "67e830a5-9d6e-4be7-8bc2-32aa3aaede38",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pu9wpFD5TMeZVIyz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "cortesjoaco1@gmail.com",
+        "subject": "[RENDICION] Tarea completada - resolucion del agente",
+        "emailType": "text",
+        "message": "={{ 'Tarea completada.\\n\\nRendicion recibida:\\n' + $('When chat message received').item.json.chatInput + '\\n\\nResolucion del agente:\\n' + $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        -208
+      ],
+      "id": "f4a98edb-6262-4ce7-8cf4-c3e97e64a229",
+      "name": "Send a message",
+      "webhookId": "6f404410-9a7f-4d8d-989c-b3c8d363eef2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V1t2V334aARTdBUu",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2d4ab06-a94a-47e8-9cae-882d907e910a",
+              "name": "OUTPUT",
+              "value": "={{ $('AI Agent').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1056,
+        16
+      ],
+      "id": "701b705b-1725-4911-a80c-716d2aa62b45",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ea7522ff-6c97-42e3-8f82-474f9bb1cc23",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "ESCALADO",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        592,
+        0
+      ],
+      "id": "700683cd-a61a-421a-be51-2245d4d88cb6",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "900a6366-cddf-479c-b7cd-f69ef254b7f2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f82b0a3dee671d7f790ddb372c3d6ee3114eb8de6d44a7ea80b50002dbcd5449"
+  },
+  "nodeGroups": [],
+  "id": "xbUsA8bcx05AAKQP",
+  "tags": []
+}
